@@ -1,0 +1,110 @@
+{
+  "name": "cldt-editor",
+  "displayName": "CLDT Editor",
+  "description": "Language support for Cloudinary Transformation (.cldt) files",
+  "version": "0.1.0",
+  "publisher": "cloudinary",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "cldt",
+        "aliases": [
+          "Cloudinary Transformation",
+          "cldt"
+        ],
+        "extensions": [
+          ".cldt"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/cldt-light.png",
+          "dark": "./icons/cldt-dark.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "cldt",
+        "scopeName": "source.cldt",
+        "path": "./syntaxes/cldt.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "cldt",
+        "path": "./snippets/cldt.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "cldt.showPreview",
+        "title": "Open Preview",
+        "category": "CLDT",
+        "icon": "$(open-preview)"
+      },
+      {
+        "command": "cldt.showPreviewToSide",
+        "title": "Open Preview to the Side",
+        "category": "CLDT",
+        "icon": "$(open-preview)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "cldt.showPreviewToSide",
+          "when": "editorLangId == cldt",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "cldt.showPreview",
+          "when": "editorLangId == cldt",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "cldt.showPreview",
+          "when": "editorLangId == cldt"
+        },
+        {
+          "command": "cldt.showPreviewToSide",
+          "when": "editorLangId == cldt"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "cldt.showPreviewToSide",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "editorLangId == cldt"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.75.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.45.0",
+    "@typescript-eslint/parser": "^5.45.0",
+    "eslint": "^8.28.0",
+    "typescript": "^4.9.3"
+  }
+}

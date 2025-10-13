@@ -1,0 +1,50 @@
+https://res.cloudinary.com/demo/image/upload/
+###
+# Example with variables, conditionals, and layers
+###
+$width_800,                   # Define width variable
+$height_600,                  # Define height variable
+$quality_auto:best/           # Define quality variable
+
+###
+# Conditional block with spacing
+###
+if_$width_gt_500/
+  w_$width/
+  h_$height/
+  c_fill/
+if_end/
+
+###
+# Another conditional
+###
+if_$foil_eq_!true!/
+  e_cut_out/
+if_else/
+  co_rgb:ffffff/
+if_end/
+
+###
+# Layer with transformations
+###
+l_logo,w_200/
+  x_10,y_10/
+  g_north_east/
+  opacity_80/
+  fl_layer_apply/
+
+###
+# Another layer
+###
+l_text:Hello_World/
+  co_$textcolor/
+  w_500/
+  fl_layer_apply/
+
+###
+# Final transformations
+###
+q_$quality/
+f_webp/
+sample.jpg
+

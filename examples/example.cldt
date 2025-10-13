@@ -1,0 +1,190 @@
+// Example Cloudinary Transformation File (.cldt)
+// This demonstrates various transformation features
+
+// ============================================
+// Basic Image Resize
+// ============================================
+width: 800
+height: 600
+crop: fill
+gravity: auto
+quality: auto:best
+format: webp
+
+// ============================================
+// Responsive Image with DPR
+// ============================================
+width: 400
+dpr: 2.0
+crop: scale
+format: auto
+
+// ============================================
+// Thumbnail with Face Detection
+// ============================================
+width: 150
+height: 150
+crop: thumb
+gravity: face
+radius: max
+
+// ============================================
+// Artistic Effects
+// ============================================
+width: 600
+effect: oil_paint:50
+effect: vignette:30
+
+// ============================================
+// Color Adjustments
+// ============================================
+effect: brightness:20
+effect: contrast:15
+effect: saturation:30
+effect: hue:180
+
+// ============================================
+// Background Removal (AI)
+// ============================================
+effect: background_removal
+background: white
+format: png
+
+// ============================================
+// Image with Overlay (Logo/Watermark)
+// ============================================
+width: 1200
+height: 630
+crop: fill
+quality: 90
+
+overlay: {
+  source: "logo"
+  width: 150
+  gravity: south_east
+  x: 20
+  y: 20
+  opacity: 80
+}
+
+// ============================================
+// Border and Rounded Corners
+// ============================================
+width: 500
+border: 10px_solid_rgb:2c3e50
+radius: 20
+background: rgb:ecf0f1
+
+// ============================================
+// Rotation and Transformation
+// ============================================
+width: 400
+angle: 15
+crop: fit
+background: transparent
+
+// ============================================
+// Generative Fill
+// ============================================
+aspect_ratio: 16:9
+crop: pad
+effect: generative_fill
+gravity: center
+background: gen_fill
+
+// ============================================
+// Social Media Format (Instagram)
+// ============================================
+width: 1080
+height: 1080
+crop: fill
+gravity: auto:subject
+quality: auto:good
+format: jpg
+
+// ============================================
+// Blur Effect for Privacy
+// ============================================
+effect: blur:800
+quality: 70
+
+// ============================================
+// Conditional Transformation
+// ============================================
+// if: width > 1000 {
+//   quality: 80
+//   format: webp
+// } else {
+//   quality: 90
+//   format: jpg
+// }
+
+// ============================================
+// Grayscale with Sepia Tone
+// ============================================
+effect: grayscale
+effect: sepia:50
+
+// ============================================
+// Pixelate Effect
+// ============================================
+effect: pixelate:10
+
+// ============================================
+// Multiple Overlays
+// ============================================
+width: 800
+height: 600
+
+overlay: {
+  source: "background_pattern"
+  opacity: 20
+}
+
+overlay: {
+  source: "logo"
+  width: 100
+  gravity: north_east
+  x: 10
+  y: 10
+}
+
+overlay: {
+  source: "badge"
+  width: 80
+  gravity: south_west
+  x: 10
+  y: 10
+}
+
+// ============================================
+// E-commerce Product Image
+// ============================================
+width: 800
+height: 800
+crop: pad
+background: white
+quality: 90
+format: jpg
+radius: 10
+
+// ============================================
+// High-DPI Display Optimization
+// ============================================
+width: 600
+height: 400
+dpr: 3.0
+crop: fill
+gravity: auto
+quality: auto:best
+format: webp
+
+// ============================================
+// Aspect Ratio Transformation
+// ============================================
+aspect_ratio: 21:9
+crop: fill
+gravity: center
+width: 1920
+
+
