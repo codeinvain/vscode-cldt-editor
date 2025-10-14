@@ -4,17 +4,18 @@ The CLDT formatter implements intelligent indentation for Cloudinary transformat
 
 ## Indentation Rules
 
-### 1. Conditional Blocks (`if_` / `if_end` / `end_if`)
+### 1. Conditional Blocks (`if_` / `if_else` / `if_end` / `end_if`)
 
 Conditional transformations create an indentation level. The pattern is:
 
 - **Component starting with `if_`** (e.g., `if_isndef_$var`, `if_width_gt_500`) → starts indentation
 - **Content inside the condition** → indented
+- **Component that is exactly `if_else`** → same level as `if_`, starts new indented block
 - **Component that is exactly `if_end` or `end_if`** → ends indentation
 
 ```
 if_isndef_$variable/
-  [indented content inside condition]
+  [indented content inside if-branch]
 if_end/
 ```
 
@@ -32,7 +33,21 @@ if_end/
 sample.jpg
 ```
 
-**Note:** Each conditional block is independent. Multiple sequential conditionals will each create their own indent level that properly closes.
+**If-Else Example:**
+
+```
+https://res.cloudinary.com/demo/image/upload/
+if_$foil_eq_!true!/
+  e_sepia/
+if_else/
+  co_rgb:ffffff/
+if_end/
+```
+
+**Note:**
+
+- Each conditional block is independent. Multiple sequential conditionals will each create their own indent level that properly closes.
+- `if_else` acts as a separator - it's at the same indentation level as the corresponding `if_`, and the content after it is indented.
 
 ### 2. Layers (`l_` / `fl_layer_apply`)
 
@@ -95,13 +110,15 @@ sample
 
 ### Starts Indentation:
 
-- Any component starting with `if_` (except those containing `end_if`)
+- Any component starting with `if_` (except `if_end`, `end_if`, and `if_else`)
+- Component that is exactly `if_else` (also ends the previous block)
 - Any component starting with `l_` followed by a non-comma character (layer definitions)
   - Example: `l_logo`, `l_$variable`, `l_text:Hello`
   - Not: `fl_layer_apply` (this is a flag, not a layer start)
 
 ### Ends Indentation:
 
+- Component that is exactly `if_else` (also starts a new block)
 - Components containing `if_end` or `end_if`
 - Components containing `fl_layer_apply`
 

@@ -20,20 +20,26 @@ co_$color/                    # Using color variable
 # Complex Example
 ###
 $pos_!bottom!,                # Position variable
-$foil_!true!,                 # Boolean-like string
-$lrpad_205,                   # Numeric padding
+$foil_!true!,
+$txtlh_205,
+$ftbpad_3,
+$lrpad_205/
+
+# Numeric padding
 
 if_$pos_eq_!top!/             # Using variable in condition
   $ftxty_$ftbpad/             # Assignment using another variable
 if_else/
-  $ftxty_h_sub_$txtlh_sub_$ftbpad/  # Complex calculation
+  $ftxty_h_sub_$txtlh_sub_$ftbpad/ # Complex calculation
 if_end/
 
 ###
 # More Variable References
 ###
-l_text:$(city),               # Variable reference with $()
-w_$finalw/                    # Simple reference
+l_text:Arial_30px:$(city),    # Variable reference with $()
+  w_$finalw/                  # Simple reference
+  fl_layer_apply/
 
+/v0/
 sample.jpg
 

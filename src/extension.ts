@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { CldtCompletionProvider } from "./completionProvider";
+import { CldtDecorationProvider } from "./decorationProvider";
 import { CldtDefinitionProvider } from "./definitionProvider";
 import { CldtDiagnostics } from "./diagnostics";
 import { CldtFormattingProvider } from "./formattingProvider";
@@ -49,6 +50,32 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  // Initialize decoration provider
+  const decorationProvider = new CldtDecorationProvider();
+
+  // Update decorations for active editor
+  const updateDecorations = () => {
+    const editor = vscode.window.activeTextEditor;
+    if (editor && editor.document.languageId === languageId) {
+      decorationProvider.updateDecorations(editor);
+    }
+  };
+
+  // Update decorations on document change
+  const decorationChangeListener = vscode.workspace.onDidChangeTextDocument((event) => {
+    const editor = vscode.window.activeTextEditor;
+    if (editor && event.document === editor.document && editor.document.languageId === languageId) {
+      decorationProvider.updateDecorations(editor);
+    }
+  });
+
+  // Update decorations on editor change
+  const decorationEditorChangeListener = vscode.window.onDidChangeActiveTextEditor((editor) => {
+    if (editor && editor.document.languageId === languageId) {
+      decorationProvider.updateDecorations(editor);
+    }
+  });
+
   // Initialize preview provider
   const previewProvider = new CldtPreviewProvider(context.extensionUri);
 
@@ -81,6 +108,13 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  // Auto-open preview when a CLDT file is opened
+  const autoOpenPreviewListener = vscode.workspace.onDidOpenTextDocument((document) => {
+    if (document.languageId === languageId) {
+      previewProvider.showPreview(document);
+    }
+  });
+
   context.subscriptions.push(
     completionProvider,
     hoverProvider,
@@ -89,10 +123,13 @@ export function activate(context: vscode.ExtensionContext) {
     documentChangeListener,
     documentOpenListener,
     documentCloseListener,
+    decorationChangeListener,
+    decorationEditorChangeListener,
     showPreviewCommand,
     showPreviewToSideCommand,
     documentChangePreviewListener,
-    editorChangeListener
+    editorChangeListener,
+    autoOpenPreviewListener
   );
 
   // Trigger diagnostics for currently open documents
@@ -101,6 +138,16 @@ export function activate(context: vscode.ExtensionContext) {
       diagnostics.updateDiagnostics(document, diagnosticCollection);
     }
   });
+
+  // Auto-open preview for already open CLDT documents
+  vscode.workspace.textDocuments.forEach((document) => {
+    if (document.languageId === languageId) {
+      previewProvider.showPreview(document);
+    }
+  });
+
+  // Apply decorations to already open CLDT documents
+  updateDecorations();
 }
 
 export function deactivate() {

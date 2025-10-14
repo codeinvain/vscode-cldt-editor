@@ -4,8 +4,8 @@ https://res.cloudinary.com/demo/image/upload/
 ###
 $width_800,                   # Define width variable
 $height_600,                  # Define height variable
-$quality_auto:best/           # Define quality variable
-
+$quality_100/                 # Define quality variable
+$foil_!true!/
 ###
 # Conditional block with spacing
 ###
@@ -19,10 +19,11 @@ if_end/
 # Another conditional
 ###
 if_$foil_eq_!true!/
-  e_cut_out/
+  e_sepia/
 if_else/
   co_rgb:ffffff/
 if_end/
+
 
 ###
 # Layer with transformations
@@ -30,21 +31,23 @@ if_end/
 l_logo,w_200/
   x_10,y_10/
   g_north_east/
-  opacity_80/
-  fl_layer_apply/
+  o_80/
+fl_layer_apply/
+
 
 ###
 # Another layer
 ###
-l_text:Hello_World/
+l_text:Arial_24:Hello World/
   co_$textcolor/
   w_500/
-  fl_layer_apply/
+fl_layer_apply/
+
 
 ###
 # Final transformations
 ###
 q_$quality/
 f_webp/
-sample.jpg
-
+/v1234567890/
+sample

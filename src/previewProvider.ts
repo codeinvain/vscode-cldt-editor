@@ -1,5 +1,10 @@
 import * as vscode from "vscode";
 
+interface Hint {
+  message: string;
+  type: "warning" | "info" | "error";
+}
+
 export class CldtPreviewProvider {
   private static readonly viewType = "cldt.preview";
   private panel: vscode.WebviewPanel | undefined;
@@ -7,6 +12,99 @@ export class CldtPreviewProvider {
   private currentDocument: vscode.TextDocument | undefined;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
+
+  private analyzeHints(cldHeaders: { [key: string]: string }, url: string, documentText: string): Hint[] {
+    const hints: Hint[] = [];
+
+    // Track if we've already added specific hints for errors
+    let hasSpecificErrorHint = false;
+
+    // Check URL for common issues
+    if (url.includes("w_") || url.includes("h_")) {
+      const widthMatch = url.match(/w_([0-9.]+)/);
+      const heightMatch = url.match(/h_([0-9.]+)/);
+
+      if (widthMatch && widthMatch[1].includes(".")) {
+        const lineNumber = this.findParameterLine(documentText, `w_${widthMatch[1]}`);
+        hints.push({
+          message: `Line ${lineNumber}: Width parameter 'w_${widthMatch[1]}' contains a decimal point. Use an integer value instead (e.g., w_${Math.round(
+            parseFloat(widthMatch[1])
+          )}).`,
+          type: "warning",
+        });
+        hasSpecificErrorHint = true;
+      }
+
+      if (heightMatch && heightMatch[1].includes(".")) {
+        const lineNumber = this.findParameterLine(documentText, `h_${heightMatch[1]}`);
+        hints.push({
+          message: `Line ${lineNumber}: Height parameter 'h_${heightMatch[1]}' contains a decimal point. Use an integer value instead (e.g., h_${Math.round(
+            parseFloat(heightMatch[1])
+          )}).`,
+          type: "warning",
+        });
+        hasSpecificErrorHint = true;
+      }
+    }
+
+    // Check for x-cld-error header and extract specific error details
+    const cldError = cldHeaders["x-cld-error"];
+    if (cldError) {
+      // Check for invalid variable assignment error: "Invalid assignment to $varName: value"
+      const invalidAssignmentMatch = cldError.match(/Invalid assignment to (\$[\w]+):\s*(.+)$/);
+      if (invalidAssignmentMatch) {
+        const varName = invalidAssignmentMatch[1];
+        const invalidValue = invalidAssignmentMatch[2].trim();
+        const lineNumber = this.findParameterLine(documentText, varName);
+        hints.push({
+          message: `Line ${lineNumber}: Invalid assignment to variable '${varName}' with value '${invalidValue}'. Check the variable syntax and value format.`,
+          type: "error",
+        });
+        hasSpecificErrorHint = true;
+      }
+      // Check for variable used before assignment: "Variable $varName is used before being assigned"
+      else {
+        const usedBeforeAssignmentMatch = cldError.match(/Variable (\$[\w]+) is used before being assigned/);
+        if (usedBeforeAssignmentMatch) {
+          const varName = usedBeforeAssignmentMatch[1];
+          const lineNumber = this.findParameterLine(documentText, varName);
+          hints.push({
+            message: `Line ${lineNumber}: Variable '${varName}' is used before being assigned. Define the variable before using it, or check for typos in the variable name.`,
+            type: "error",
+          });
+          hasSpecificErrorHint = true;
+        }
+        // Only show generic error if we don't have specific hints
+        else if (!hasSpecificErrorHint) {
+          hints.push({
+            message: `Cloudinary error: ${cldError}`,
+            type: "error",
+          });
+        }
+      }
+    }
+
+    // Check for other common issues
+    if (url.includes("c_scale") && !url.includes("w_") && !url.includes("h_")) {
+      const lineNumber = this.findParameterLine(documentText, "c_scale");
+      hints.push({
+        message: `Line ${lineNumber}: Using c_scale without width or height parameter. Consider adding w_ or h_ to specify dimensions.`,
+        type: "info",
+      });
+    }
+
+    return hints;
+  }
+
+  private findParameterLine(documentText: string, parameter: string): number {
+    const lines = documentText.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes(parameter)) {
+        return i + 1; // Line numbers are 1-based
+      }
+    }
+    return 1; // Default to line 1 if not found
+  }
 
   public showPreview(document: vscode.TextDocument) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -49,7 +147,9 @@ export class CldtPreviewProvider {
               vscode.env.openExternal(vscode.Uri.parse(message.url));
               break;
             case "fetchHeaders":
-              await this.fetchAndSendHeaders(message.url);
+              if (this.currentDocument) {
+                await this.fetchAndSendHeaders(message.url, this.currentDocument.getText());
+              }
               break;
           }
         },
@@ -79,7 +179,7 @@ export class CldtPreviewProvider {
     return lines.join("");
   }
 
-  private async fetchAndSendHeaders(url: string) {
+  private async fetchAndSendHeaders(url: string, documentText: string) {
     if (!this.panel) {
       return;
     }
@@ -90,23 +190,31 @@ export class CldtPreviewProvider {
 
       const urlObj = new URL(url);
       const client = urlObj.protocol === "https:" ? https : http;
-
+      const cldHeaderPatterns = [/^x-request-id$/, /^x-cld.*$/];
       return new Promise<void>((resolve) => {
-        const req = client.request(url, { method: "GET" }, (res) => {
-          const headers: { [key: string]: string } = {};
+        const req = client.request(url, { method: "GET", headers: { "cache-control": "no-cache" } }, (res) => {
+          const cldHeaders: { [key: string]: string } = {};
+          const otherHeaders: { [key: string]: string } = {};
 
-          // Extract all X-Cld headers
           Object.entries(res.headers).forEach(([key, value]) => {
-            if (key.toLowerCase().startsWith("x-cld")) {
-              headers[key] = Array.isArray(value) ? value.join(", ") : value || "";
+            const headerValue = Array.isArray(value) ? value.join(", ") : value || "";
+            if (cldHeaderPatterns.some((regex) => regex.test(key))) {
+              cldHeaders[key] = headerValue;
+            } else {
+              otherHeaders[key] = headerValue;
             }
           });
 
+          // Analyze hints based on headers, URL, and document text
+          const hints = this.analyzeHints(cldHeaders, url, documentText);
+
           this.panel?.webview.postMessage({
             command: "headersReceived",
-            headers: headers,
+            cldHeaders: cldHeaders,
+            otherHeaders: otherHeaders,
             statusCode: res.statusCode,
             statusMessage: res.statusMessage,
+            hints: hints,
           });
 
           resolve();
@@ -389,6 +497,60 @@ export class CldtPreviewProvider {
             font-size: 48px;
             margin-bottom: 16px;
         }
+        .hints-container {
+            background-color: var(--vscode-sideBar-background);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            padding: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+        }
+        .hints-container.visible {
+            max-height: 500px;
+            padding: 12px 16px;
+        }
+        .hint-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            line-height: 1.5;
+            border-left: 3px solid;
+        }
+        .hint-item:last-child {
+            margin-bottom: 0;
+        }
+        .hint-item.warning {
+            background-color: rgba(255, 191, 0, 0.1);
+            border-left-color: var(--vscode-terminal-ansiYellow);
+        }
+        .hint-item.error {
+            background-color: rgba(255, 0, 0, 0.1);
+            border-left-color: var(--vscode-errorForeground);
+        }
+        .hint-item.info {
+            background-color: rgba(0, 122, 204, 0.1);
+            border-left-color: var(--vscode-charts-blue);
+        }
+        .hint-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .hint-message {
+            flex: 1;
+            color: var(--vscode-foreground);
+        }
+        .hints-header {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--vscode-descriptionForeground);
+            margin-bottom: 8px;
+        }
     </style>
 </head>
 <body>
@@ -404,6 +566,11 @@ export class CldtPreviewProvider {
             <button class="btn btn-secondary" id="copy-url-btn">📋 Copy URL</button>
             <button class="btn" id="open-browser-btn">🌐 Open in Browser</button>
         </div>
+    </div>
+    
+    <div class="hints-container" id="hints-container">
+        <div class="hints-header">Hints & Warnings</div>
+        <div id="hints-list"></div>
     </div>
     
     <div class="content" id="content">
@@ -443,6 +610,34 @@ export class CldtPreviewProvider {
         const statusText = document.getElementById('status-text');
         const imageInfo = document.getElementById('image-info');
         const content = document.getElementById('content');
+        const hintsContainer = document.getElementById('hints-container');
+        const hintsList = document.getElementById('hints-list');
+
+        function displayHints(hints) {
+            if (!hints || hints.length === 0) {
+                hintsContainer.classList.remove('visible');
+                return;
+            }
+
+            const getHintIcon = (type) => {
+                switch(type) {
+                    case 'warning': return '⚠️';
+                    case 'error': return '❌';
+                    case 'info': return 'ℹ️';
+                    default: return '💡';
+                }
+            };
+
+            const hintsHtml = hints.map(hint => \`
+                <div class="hint-item \${hint.type}">
+                    <span class="hint-icon">\${getHintIcon(hint.type)}</span>
+                    <span class="hint-message">\${hint.message}</span>
+                </div>
+            \`).join('');
+
+            hintsList.innerHTML = hintsHtml;
+            hintsContainer.classList.add('visible');
+        }
 
         // Set up button event listeners
         document.getElementById('copy-url-btn').addEventListener('click', () => {
@@ -478,17 +673,11 @@ export class CldtPreviewProvider {
             // Update image info
             document.getElementById('dimensions').textContent = img.naturalWidth + ' × ' + img.naturalHeight + ' px';
             
-            // Try to get file size
-            fetch(imageUrl, { method: 'HEAD' })
-                .then(response => {
-                    const size = response.headers.get('content-length');
-                    if (size) {
-                        document.getElementById('file-size').textContent = formatBytes(parseInt(size));
-                    }
-                })
-                .catch(() => {
-                    document.getElementById('file-size').textContent = 'Unknown';
-                });
+            // Fetch headers to get file size and display Cloudinary headers
+            vscode.postMessage({
+                command: 'fetchHeaders',
+                url: imageUrl
+            });
         };
 
         img.onerror = function() {
@@ -519,39 +708,93 @@ export class CldtPreviewProvider {
             
             switch (message.command) {
                 case 'headersReceived':
-                    const headers = message.headers;
-                    const headersList = Object.keys(headers).length > 0
-                        ? Object.entries(headers)
-                            .map(([key, value]) => \`<li><strong>\${key}:</strong> \${value}</li>\`)
-                            .join('')
-                        : '<li>No X-Cld headers found</li>';
+                    const cldHeaders = message.cldHeaders;
+                    const otherHeaders = message.otherHeaders;
                     
-                    const statusInfo = message.statusCode 
-                        ? \`<p style="margin-bottom: 8px; color: var(--vscode-descriptionForeground);">HTTP Status: \${message.statusCode} \${message.statusMessage || ''}</p>\`
-                        : '';
+                    // Display hints if available
+                    if (message.hints) {
+                        displayHints(message.hints);
+                    }
                     
-                    content.innerHTML = \`
-                        <div class="error-display">
-                            <div class="error-icon">❌</div>
-                            <h2>Failed to Load Image</h2>
-                            \${statusInfo}
-                            <p style="margin-bottom: 16px;">Cloudinary Response Headers:</p>
-                            <ul style="text-align: left; margin-top: 12px; line-height: 1.8; background: var(--vscode-textBlockQuote-background); padding: 16px 24px; border-radius: 4px; border-left: 4px solid var(--vscode-textBlockQuote-border); max-width: 600px;">
-                                \${headersList}
-                            </ul>
-                        </div>
-                    \`;
+                    // Check if we're in error mode or success mode
+                    if (img.style.display === 'none') {
+                        // Error mode - display full headers in content area
+                        const cldHeadersList = Object.keys(cldHeaders).length > 0
+                            ? Object.entries(cldHeaders)
+                                .map(([key, value]) => \`<li><strong>\${key}:</strong> \${value}</li>\`)
+                                .join('')
+                            : '<li style="color: var(--vscode-descriptionForeground); font-style: italic;">No Cloudinary headers found</li>';
+                        
+                        const otherHeadersList = Object.keys(otherHeaders).length > 0
+                            ? Object.entries(otherHeaders)
+                                .map(([key, value]) => \`<li><strong>\${key}:</strong> \${value}</li>\`)
+                                .join('')
+                            : '<li style="color: var(--vscode-descriptionForeground); font-style: italic;">No other headers found</li>';
+                        
+                        const statusInfo = message.statusCode 
+                            ? \`<p style="margin-bottom: 16px; color: var(--vscode-descriptionForeground);">HTTP Status: \${message.statusCode} \${message.statusMessage || ''}</p>\`
+                            : '';
+                        
+                        content.innerHTML = \`
+                            <div class="error-display">
+                                <div class="error-icon">❌</div>
+                                <h2>Failed to Load Image</h2>
+                                \${statusInfo}
+                                
+                                <div style="max-width: 800px; width: 100%;">
+                                    <h3 style="margin: 24px 0 12px 0; text-align: left; font-size: 14px;">Cloudinary Headers</h3>
+                                    <ul style="text-align: left; line-height: 1.8; background: var(--vscode-textBlockQuote-background); padding: 16px 24px; border-radius: 4px; border-left: 4px solid var(--vscode-charts-blue); margin: 0;">
+                                        \${cldHeadersList}
+                                    </ul>
+                                    
+                                    <h3 style="margin: 24px 0 12px 0; text-align: left; font-size: 14px;">Other Headers</h3>
+                                    <ul style="text-align: left; line-height: 1.8; background: var(--vscode-textBlockQuote-background); padding: 16px 24px; border-radius: 4px; border-left: 4px solid var(--vscode-textBlockQuote-border); margin: 0;">
+                                        \${otherHeadersList}
+                                    </ul>
+                                </div>
+                            </div>
+                        \`;
+                    } else {
+                        // Success mode - update file size and append Cloudinary headers to image-info
+                        
+                        // Update file size from content-length header
+                        const contentLength = otherHeaders['content-length'];
+                        if (contentLength) {
+                            document.getElementById('file-size').textContent = formatBytes(parseInt(contentLength));
+                        } else {
+                            document.getElementById('file-size').textContent = 'Unknown';
+                        }
+                        
+                        // Append Cloudinary headers if available
+                        if (Object.keys(cldHeaders).length > 0) {
+                            const cldHeadersHtml = Object.entries(cldHeaders)
+                                .map(([key, value]) => \`
+                                    <div class="info-row">
+                                        <span class="info-label">\${key}:</span>
+                                        <span class="info-value">\${value}</span>
+                                    </div>
+                                \`)
+                                .join('');
+                            
+                            // Add a separator and then the Cloudinary headers
+                            const separator = '<div style="height: 1px; background: var(--vscode-panel-border); margin: 8px 0;"></div>';
+                            imageInfo.innerHTML += separator + cldHeadersHtml;
+                        }
+                    }
                     break;
                     
                 case 'headersFailed':
-                    content.innerHTML = \`
-                        <div class="error-display">
-                            <div class="error-icon">❌</div>
-                            <h2>Failed to Load Image</h2>
-                            <p style="margin-bottom: 16px;">Unable to fetch headers from Cloudinary</p>
-                            <p style="font-size: 0.9em; color: var(--vscode-descriptionForeground);">Error: \${message.error}</p>
-                        </div>
-                    \`;
+                    // Only show error if we're in error mode (image failed to load)
+                    if (img.style.display === 'none') {
+                        content.innerHTML = \`
+                            <div class="error-display">
+                                <div class="error-icon">❌</div>
+                                <h2>Failed to Load Image</h2>
+                                <p style="margin-bottom: 16px;">Unable to fetch headers from Cloudinary</p>
+                                <p style="font-size: 0.9em; color: var(--vscode-descriptionForeground);">Error: \${message.error}</p>
+                            </div>
+                        \`;
+                    }
                     break;
             }
         });

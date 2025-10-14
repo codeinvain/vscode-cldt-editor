@@ -70,7 +70,7 @@
           "match": "(\\$[a-zA-Z][a-zA-Z0-9]*)(_)([^,/\\s]+)",
           "captures": {
             "1": {
-              "name": "variable.other.readwrite"
+              "name": "variable.other.readwrite.cldt"
             },
             "2": {
               "name": "keyword.operator.assignment"
@@ -81,11 +81,11 @@
           }
         },
         {
-          "name": "variable.other.readwrite",
+          "name": "variable.other.readwrite.cldt",
           "match": "\\$\\([a-zA-Z][a-zA-Z0-9]*\\)"
         },
         {
-          "name": "variable.other.readwrite",
+          "name": "variable.other.readwrite.cldt",
           "match": "\\$[a-zA-Z][a-zA-Z0-9]*(?!_|\\()"
         }
       ]
@@ -127,7 +127,7 @@
     "numbers": {
       "patterns": [
         {
-          "name": "constant.numeric",
+          "name": "constant.numeric.cldt",
           "match": "\\b\\d+(\\.\\d+)?\\b"
         }
       ]
@@ -135,15 +135,15 @@
     "keywords": {
       "patterns": [
         {
-          "name": "keyword.control",
+          "name": "keyword.control.cldt",
           "match": "\\b(if_isndef|if_else|if_end|if_eq|if_ne|if_gt|if_lt|if_gte|if_lte)(?=_)"
         },
         {
-          "name": "keyword.control",
+          "name": "keyword.control.cldt",
           "match": "\\b(if|else|for|while|return|break|continue|end)\\b"
         },
         {
-          "name": "storage.type",
+          "name": "storage.type.cldt",
           "match": "\\b(transformation|layer|overlay|underlay|effect)\\b"
         }
       ]
