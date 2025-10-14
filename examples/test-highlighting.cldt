@@ -13,7 +13,7 @@ if_end/
 $width_800,
 $height_600,
 $name_!John_Doe!,
-$color_rgb:fefefe,
+$color_!rgb:fefefe!,
 
 ### Variable References (should be blue/cyan)
 w_$width/
@@ -52,7 +52,7 @@ w_400,h_300/c_fill/q_80
 
 ### Complex Example
 if_isndef_$logo/
-  $logo_!my-logo-image!,
+$logo_!my-logo-image!,
 if_end/
 l_text:Roboto_48:$(title),
 w_1200,h_630,c_fill,g_auto/
