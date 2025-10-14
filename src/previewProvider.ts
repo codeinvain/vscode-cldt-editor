@@ -74,12 +74,34 @@ export class CldtPreviewProvider {
           });
           hasSpecificErrorHint = true;
         }
-        // Only show generic error if we don't have specific hints
-        else if (!hasSpecificErrorHint) {
-          hints.push({
-            message: `Cloudinary error: ${cldError}`,
-            type: "error",
-          });
+        // Check for invalid transformation component errors
+        else {
+          const invalidComponentMatch = cldError.match(/Invalid transformation component - (.+?)(?:\s|$)/);
+          if (invalidComponentMatch) {
+            const component = invalidComponentMatch[1].trim();
+            const lineNumber = this.findParameterLine(documentText, component);
+            hints.push({
+              message: `Line ${lineNumber}: Invalid transformation component - ${component}`,
+              type: "error",
+            });
+            hasSpecificErrorHint = true;
+          }
+          // Only show generic error if we don't have specific hints
+          else if (!hasSpecificErrorHint) {
+            // Try to extract any component from the error message and find its line
+            const lineNumber = this.findErrorLine(documentText, cldError);
+            if (lineNumber > 1) {
+              hints.push({
+                message: `Line ${lineNumber}: ${cldError}`,
+                type: "error",
+              });
+            } else {
+              hints.push({
+                message: `Cloudinary error: ${cldError}`,
+                type: "error",
+              });
+            }
+          }
         }
       }
     }
@@ -98,11 +120,83 @@ export class CldtPreviewProvider {
 
   private findParameterLine(documentText: string, parameter: string): number {
     const lines = documentText.split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes(parameter)) {
-        return i + 1; // Line numbers are 1-based
+
+    // If parameter is a variable (starts with $), look for both $var and $(var) syntax
+    if (parameter.startsWith("$")) {
+      const varName = parameter.substring(1); // Remove the $
+      const searchPatterns = [
+        parameter, // $varName
+        `$(${varName})`, // $(varName)
+        `$${varName}_`, // $varName_ (assignment)
+      ];
+
+      // First, try to find the variable being used (not in assignments or conditionals)
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        // Skip assignment lines (lines with $var_value syntax at the start)
+        if (line.trim().startsWith(`$${varName}_`)) {
+          continue;
+        }
+        // Skip if_isndef/if_ndef conditional checks
+        if (line.includes(`if_isndef_${parameter}`) || line.includes(`if_ndef_${parameter}`)) {
+          continue;
+        }
+
+        // Check if any of the patterns exist in the line
+        for (const pattern of searchPatterns) {
+          if (line.includes(pattern)) {
+            return i + 1; // Line numbers are 1-based
+          }
+        }
+      }
+
+      // If not found in usage, look for assignment or any occurrence
+      for (let i = 0; i < lines.length; i++) {
+        for (const pattern of searchPatterns) {
+          if (lines[i].includes(pattern)) {
+            return i + 1;
+          }
+        }
+      }
+    } else {
+      // For non-variable parameters, use simple search
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes(parameter)) {
+          return i + 1; // Line numbers are 1-based
+        }
       }
     }
+
+    return 1; // Default to line 1 if not found
+  }
+
+  private findErrorLine(documentText: string, errorMessage: string): number {
+    // Try to extract potential components from the error message
+    // Common patterns: quoted strings, parameter names, etc.
+    const lines = documentText.split("\n");
+
+    // Try to find quoted strings in the error message
+    const quotedMatch = errorMessage.match(/['"`]([^'"`]+)['"`]/);
+    if (quotedMatch) {
+      const searchTerm = quotedMatch[1];
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes(searchTerm)) {
+          return i + 1;
+        }
+      }
+    }
+
+    // Try to find transformation parameters (e.g., "w_100", "c_fill")
+    const paramMatch = errorMessage.match(/\b([a-z_]+_[a-z0-9_:]+)\b/i);
+    if (paramMatch) {
+      const searchTerm = paramMatch[1];
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].includes(searchTerm)) {
+          return i + 1;
+        }
+      }
+    }
+
     return 1; // Default to line 1 if not found
   }
 
