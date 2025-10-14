@@ -38,7 +38,7 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
 
     // Check if this is already a multi-line format (has newlines)
     if (trimmed.includes("\n")) {
-      return this.formatMultiLineCldt(text);
+      return this.formatCloudinaryTransformationFormat(text);
     }
 
     // Parse single-line Cloudinary URL
@@ -154,7 +154,7 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
     return formattedLines.join("\n");
   }
 
-  private formatMultiLineCldt(text: string): string {
+  private formatCloudinaryTransformationFormat(text: string): string {
     const lines = text.split("\n");
     const formattedLines: string[] = [];
     let indentLevel = 0;
