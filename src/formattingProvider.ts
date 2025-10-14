@@ -10,15 +10,15 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
     const text = document.getText();
 
     // Check if this is a Cloudinary URL format
-    if (this.isCloudinaryUrl(text)) {
-      const formatted = this.formatCloudinaryUrl(text);
+    if (this.isUrl(text)) {
+      const formatted = this.formatRawUrl(text);
       if (formatted !== text) {
         const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
         edits.push(vscode.TextEdit.replace(fullRange, formatted));
       }
     } else {
       // Format as regular CLDT syntax
-      const formatted = this.formatCldtSyntax(text, options);
+      const formatted = this.formatCloudinaryTransformationSyntax(text, options);
       if (formatted !== text) {
         const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
         edits.push(vscode.TextEdit.replace(fullRange, formatted));
@@ -28,12 +28,12 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
     return edits;
   }
 
-  private isCloudinaryUrl(text: string): boolean {
+  private isUrl(text: string): boolean {
     const trimmed = text.trim();
     return trimmed.startsWith("http://") || trimmed.startsWith("https://");
   }
 
-  private formatCloudinaryUrl(text: string): string {
+  private formatRawUrl(text: string): string {
     const trimmed = text.trim();
 
     // Check if this is already a multi-line format (has newlines)
@@ -66,17 +66,13 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
     let publicIdStartIndex = -1;
 
     // Look for version component
-    for (let i = 0; i < components.length; i++) {
-      if (/^v\d+$/.test(components[i])) {
-        versionIndex = i;
-        publicIdStartIndex = i + 1;
-        break;
-      }
-    }
+    versionIndex = components.findIndex((comp) => /^v\d+$/.test(comp));
+    if (versionIndex !== -1) {
+      publicIdStartIndex = versionIndex + 1;
+    } else {
+      // If no version found, the last component (or components) are likely the public-id
+      // Public-id is typically the last segment(s), often with an extension
 
-    // If no version found, the last component (or components) are likely the public-id
-    // Public-id is typically the last segment(s), often with an extension
-    if (versionIndex === -1) {
       // Work backwards to find where public-id likely starts
       // Look for common asset patterns or just take the last component
       publicIdStartIndex = components.length - 1;
@@ -116,8 +112,19 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
         }
 
         // Add the line with current indentation
-        const indentedLine = indent.repeat(indentLevel) + component + "/";
-        formattedLines.push(indentedLine);
+
+        if (component.includes(",")) {
+          component.split(",").forEach((instruction, index, array) => {
+            // const multiParamExpressionRegex = /[^!]+:[^!]+.*$/;
+            const delimiter = index < array.length - 1 ? "," : "/";
+            const indentedLine = indent.repeat(indentLevel) + instruction + delimiter;
+            formattedLines.push(indentedLine);
+          });
+          formattedLines.push(indent.repeat(indentLevel));
+        } else {
+          const indentedLine = indent.repeat(indentLevel) + component + "/";
+          formattedLines.push(indentedLine);
+        }
 
         // Check if this component starts a new indentation level
         if (this.startsIndentation(component)) {
@@ -354,7 +361,7 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
     return hasComma || (hasUnderscore && transformationPrefixes.test(component));
   }
 
-  private formatCldtSyntax(text: string, options: vscode.FormattingOptions): string {
+  private formatCloudinaryTransformationSyntax(text: string, options: vscode.FormattingOptions): string {
     const lines = text.split("\n");
     let indentLevel = 0;
     const formattedLines: string[] = [];
