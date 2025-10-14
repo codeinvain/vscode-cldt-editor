@@ -10,6 +10,9 @@
       "include": "#urls"
     },
     {
+      "include": "#if-conditions"
+    },
+    {
       "include": "#keywords"
     },
     {
@@ -52,6 +55,82 @@
           "name": "comment.block.cldt",
           "begin": "/\\*",
           "end": "\\*/"
+        }
+      ]
+    },
+    "if-conditions": {
+      "patterns": [
+        {
+          "name": "meta.if-condition.cldt",
+          "match": "(if_)(\\$[a-zA-Z][a-zA-Z0-9]*)(_(?:eq|ne|gt|lt|gte|lte)_)(![^!]*!)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.cldt"
+            },
+            "2": {
+              "name": "variable.other.readwrite.cldt"
+            },
+            "3": {
+              "name": "keyword.control.cldt"
+            },
+            "4": {
+              "name": "string.quoted.other"
+            }
+          }
+        },
+        {
+          "name": "meta.if-condition.cldt",
+          "match": "(if_)(\\$[a-zA-Z][a-zA-Z0-9]*)(_(?:eq|ne|gt|lt|gte|lte)_)([^,/\\s]+)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.cldt"
+            },
+            "2": {
+              "name": "variable.other.readwrite.cldt"
+            },
+            "3": {
+              "name": "keyword.control.cldt"
+            },
+            "4": {
+              "name": "string.unquoted"
+            }
+          }
+        },
+        {
+          "name": "meta.if-condition-and.cldt",
+          "match": "(_and_)(\\$[a-zA-Z][a-zA-Z0-9]*)(_(?:eq|ne|gt|lt|gte|lte)_)(![^!]*!)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.cldt"
+            },
+            "2": {
+              "name": "variable.other.readwrite.cldt"
+            },
+            "3": {
+              "name": "keyword.control.cldt"
+            },
+            "4": {
+              "name": "string.quoted.other"
+            }
+          }
+        },
+        {
+          "name": "meta.if-condition-and.cldt",
+          "match": "(_and_)(\\$[a-zA-Z][a-zA-Z0-9]*)(_(?:eq|ne|gt|lt|gte|lte)_)([^,/\\s]+)",
+          "captures": {
+            "1": {
+              "name": "keyword.control.cldt"
+            },
+            "2": {
+              "name": "variable.other.readwrite.cldt"
+            },
+            "3": {
+              "name": "keyword.control.cldt"
+            },
+            "4": {
+              "name": "string.unquoted"
+            }
+          }
         }
       ]
     },
