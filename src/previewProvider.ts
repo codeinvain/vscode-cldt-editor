@@ -1,8 +1,31 @@
+import * as fs from "fs";
+import * as path from "path";
 import * as vscode from "vscode";
 
 interface Hint {
   message: string;
   type: "warning" | "info" | "error";
+}
+
+interface UrlBindingContext {
+  prefix?: string;
+  suffix?: string;
+  cloudName?: string;
+  publicId?: string;
+}
+interface BoundUrl {
+  url: string;
+  bindings: {
+    prefix?: Binding;
+    suffix?: Binding;
+    cloudName?: Binding;
+    publicId?: Binding;
+  };
+}
+
+interface Binding {
+  src: "cldtrc" | "annotation";
+  value: string;
 }
 
 export class CldtPreviewProvider {
@@ -258,19 +281,140 @@ export class CldtPreviewProvider {
       return;
     }
 
-    const url = this.extractUrl(document);
-    this.panel.webview.html = this.getHtmlContent(url, document.fileName);
+    const boundUrl = this.evaluateUrl(document);
+    this.panel.webview.html = this.getHtmlContent(boundUrl, document.fileName);
   }
 
-  private extractUrl(document: vscode.TextDocument): string | null {
+  private evaluateUrl(document: vscode.TextDocument): BoundUrl {
     const text = document.getText().trim();
 
-    // Look for Cloudinary URLs in the document
+    const annotations = this.parseAnnotations(text);
+    const config = this.readConfigFile(document.uri);
+
+    // Merge file config with annotations (annotations take precedence)
+
+    // Fall back to original behavior: Look for Cloudinary URLs in the document
     const lines = text
       .split("\n")
       .map((line) => line.replace(/#.*$/, "").trim())
       .filter((line) => line.trim().length > 0);
-    return lines.join("");
+    const url = lines.join("");
+    return this.bindContextIfNeeded(url, config, annotations);
+  }
+
+  private readConfigFile(documentUri: vscode.Uri): UrlBindingContext {
+    try {
+      // Get the directory of the current document
+      const documentDir = path.dirname(documentUri.fsPath);
+      const configPath = path.join(documentDir, ".cldtrc.json");
+
+      // Check if config file exists
+      if (fs.existsSync(configPath)) {
+        const configContent = fs.readFileSync(configPath, "utf8");
+        const config = JSON.parse(configContent);
+
+        // Return only the valid UrlBindingContext properties
+        return {
+          prefix: config.prefix,
+          suffix: config.suffix,
+          cloudName: config["cloud-name"], // Support both formats
+          publicId: config["public-id"], // Support both formats
+        };
+      }
+    } catch (error) {
+      // Silently ignore errors (file not found, invalid JSON, etc.)
+      console.warn("Failed to read .cldtrc.json:", error);
+    }
+
+    return {};
+  }
+  private bindContextIfNeeded(url: string, config: UrlBindingContext, annotations: UrlBindingContext): BoundUrl {
+    const boundUrl: BoundUrl = {
+      url,
+      bindings: {},
+    };
+
+    if (url.startsWith("https://")) {
+      return boundUrl;
+    }
+
+    const merged = { ...config, ...annotations };
+    let constructedUrl = url;
+
+    // Build URL based on which bindings are present
+    if (merged.prefix) {
+      constructedUrl = `${merged.prefix}${constructedUrl}`;
+      boundUrl.bindings.prefix = {
+        src: annotations.prefix ? "annotation" : "cldtrc",
+        value: merged.prefix,
+      };
+    }
+
+    if (merged.suffix) {
+      constructedUrl = `${constructedUrl}${merged.suffix}`;
+      boundUrl.bindings.suffix = {
+        src: annotations.suffix ? "annotation" : "cldtrc",
+        value: merged.suffix,
+      };
+    }
+
+    if (merged.cloudName && !merged.prefix) {
+      constructedUrl = `https://res.cloudinary.com/${merged.cloudName}/image/upload/${constructedUrl}`;
+      boundUrl.bindings.cloudName = {
+        src: annotations.cloudName ? "annotation" : "cldtrc",
+        value: merged.cloudName,
+      };
+    }
+
+    if (merged.publicId && !merged.suffix) {
+      constructedUrl = `${constructedUrl}/v0/${merged.publicId}`;
+      boundUrl.bindings.publicId = {
+        src: annotations.publicId ? "annotation" : "cldtrc",
+        value: merged.publicId,
+      };
+    }
+
+    boundUrl.url = constructedUrl;
+    return boundUrl;
+  }
+
+  private parseAnnotations(text: string): UrlBindingContext {
+    const annotations: UrlBindingContext = {};
+
+    const lines = text.split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+
+      // Parse @cld/prefix directive
+      const prefixMatch = trimmed.match(/^#\s*@cld\/prefix\s+(.+)$/);
+      if (prefixMatch) {
+        annotations.prefix = prefixMatch[1].trim();
+        continue;
+      }
+
+      // Parse @cld/suffix directive
+      const suffixMatch = trimmed.match(/^#\s*@cld\/suffix\s+(.+)$/);
+      if (suffixMatch) {
+        annotations.suffix = suffixMatch[1].trim();
+        continue;
+      }
+
+      // Parse @cld/cloud-name directive
+      const cloudNameMatch = trimmed.match(/^#\s*@cld\/cloud-name\s+(.+)$/);
+      if (cloudNameMatch) {
+        annotations.cloudName = cloudNameMatch[1].trim();
+        continue;
+      }
+
+      // Parse @cld/public-id directive
+      const publicIdMatch = trimmed.match(/^#\s*@cld\/public-id\s+(.+)$/);
+      if (publicIdMatch) {
+        annotations.publicId = publicIdMatch[1].trim();
+        continue;
+      }
+    }
+
+    return annotations;
   }
 
   private async fetchAndSendHeaders(url: string, documentText: string) {
@@ -332,10 +476,10 @@ export class CldtPreviewProvider {
     }
   }
 
-  private getHtmlContent(url: string | null, fileName: string): string {
+  private getHtmlContent(boundUrl: BoundUrl | null, fileName: string): string {
     const nonce = this.getNonce();
 
-    if (!url) {
+    if (!boundUrl || !boundUrl.url) {
       return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -549,16 +693,54 @@ export class CldtPreviewProvider {
         }
         .url-text {
             flex: 1;
-            padding: 6px 10px;
+            padding: 6px 10px 16px 10px;
             background-color: var(--vscode-input-background);
             color: var(--vscode-input-foreground);
             border: 1px solid var(--vscode-input-border);
             border-radius: 2px;
             font-family: var(--vscode-editor-font-family);
             font-size: 11px;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            overflow: scroll;
             white-space: nowrap;
+            
+        }
+        .bindings-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 11px;
+        }
+        .binding-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            background-color: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            border-radius: 3px;
+            font-family: var(--vscode-editor-font-family);
+        }
+        .binding-label {
+            font-weight: 600;
+        }
+        .binding-value {
+            opacity: 0.9;
+        }
+        .binding-source {
+            margin-left: 4px;
+            padding: 1px 4px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 2px;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .binding-source.cldtrc {
+            background-color: rgba(75, 181, 67, 0.3);
+        }
+        .binding-source.annotation {
+            background-color: rgba(0, 122, 204, 0.3);
         }
         .loading-overlay {
             position: absolute;
@@ -691,13 +873,14 @@ export class CldtPreviewProvider {
     <div class="url-section">
         <div class="url-label">Cloudinary Transformation URL</div>
         <div class="url-display">
-            <div class="url-text" title="${this.escapeHtml(url)}">${this.escapeHtml(url)}</div>
+            <div class="url-text" title="${this.escapeHtml(boundUrl.url)}">${this.escapeHtml(boundUrl.url)}</div>
         </div>
+        ${this.generateBindingsHtml(boundUrl.bindings)}
     </div>
 
     <script nonce="${nonce}">
         const vscode = acquireVsCodeApi();
-        const imageUrl = ${JSON.stringify(url)};
+        const imageUrl = ${JSON.stringify(boundUrl.url)};
         const img = document.getElementById('preview-image');
         const loading = document.getElementById('loading');
         const statusDot = document.getElementById('status-dot');
@@ -897,6 +1080,47 @@ export class CldtPreviewProvider {
     </script>
 </body>
 </html>`;
+  }
+
+  private generateBindingsHtml(bindings: BoundUrl["bindings"]): string {
+    const hasBindings = Object.keys(bindings).length > 0;
+
+    if (!hasBindings) {
+      return "";
+    }
+
+    const bindingLabels: { [K in keyof typeof bindings]: string } = {
+      prefix: "Prefix",
+      suffix: "Suffix",
+      cloudName: "Cloud Name",
+      publicId: "Public ID",
+    };
+
+    const bindingItems = Object.entries(bindings)
+      .filter(([, binding]) => binding !== undefined)
+      .map(([key, binding]) => {
+        if (!binding) {
+          return "";
+        }
+        const label = bindingLabels[key as keyof typeof bindings];
+        const sourceClass = binding.src === "cldtrc" ? "cldtrc" : "annotation";
+        const sourceText = binding.src === "cldtrc" ? ".cldtrc" : "@cld/*";
+
+        return `
+          <div class="binding-item">
+            <span class="binding-label">${label}:</span>
+            <span class="binding-value">${this.escapeHtml(binding.value)}</span>
+            <span class="binding-source ${sourceClass}">${sourceText}</span>
+          </div>
+        `;
+      })
+      .join("");
+
+    return `
+      <div class="bindings-info">
+        ${bindingItems}
+      </div>
+    `;
   }
 
   private escapeHtml(text: string): string {

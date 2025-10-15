@@ -11,7 +11,7 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
 
     // Check if this is a Cloudinary URL format
     if (this.isUrl(text)) {
-      const formatted = this.formatCloudinaryTransformationFormat(this.formatRawUrl(text));
+      const formatted = this.formatCloudinaryTransformationFormat(this.formatRawUrl(text, options), options);
 
       if (formatted !== text) {
         const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
@@ -34,12 +34,12 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
     return trimmed.startsWith("http://") || trimmed.startsWith("https://");
   }
 
-  private formatRawUrl(text: string): string {
+  private formatRawUrl(text: string, options: vscode.FormattingOptions): string {
     const trimmed = text.trim();
 
     // Check if this is already a multi-line format (has newlines)
     if (trimmed.includes("\n")) {
-      return this.formatCloudinaryTransformationFormat(text);
+      return this.formatCloudinaryTransformationFormat(text, options);
     }
 
     // Parse single-line Cloudinary URL
@@ -101,7 +101,7 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
     // Add transformation components (one per line) with proper indentation
     // Handle if/end_if and layer (l_) / fl_layer_apply indentation
     let indentLevel = 0;
-    const indent = "  "; // 2 spaces per indent level
+    const indent = options.insertSpaces ? " ".repeat(options.tabSize) : "\t";
 
     if (transformationEndIndex >= 0) {
       for (let i = 0; i <= transformationEndIndex; i++) {
@@ -155,11 +155,11 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
     return formattedLines.join("\n");
   }
 
-  private formatCloudinaryTransformationFormat(text: string): string {
+  private formatCloudinaryTransformationFormat(text: string, options: vscode.FormattingOptions): string {
     const lines = text.split("\n");
     const formattedLines: string[] = [];
     let indentLevel = 0;
-    const indent = "  "; // 2 spaces per indent level
+    const indent = options.insertSpaces ? " ".repeat(options.tabSize) : "\t";
     const commentAlignColumn = 30; // Column to align inline comments
 
     // First pass: identify which lines are transformations vs public ID
@@ -384,23 +384,55 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
       // Reset empty line counter
       consecutiveEmptyLines = 0;
 
-      // Decrease indent for closing braces
-      if (line.startsWith("}")) {
+      // Skip comment-only lines (no indentation changes)
+      if (line.startsWith("#")) {
+        formattedLines.push(line);
+        continue;
+      }
+
+      // Separate transformation from inline comment
+      let transformPart = line;
+
+      const hashIndex = line.indexOf("#");
+
+      if (hashIndex > 0) {
+        transformPart = line.substring(0, hashIndex).trim();
+      }
+
+      // Remove trailing comma or slash if present for checking
+      const cleanTransform = transformPart.replace(/[,/]+$/, "");
+
+      // Check if this line ends indentation (before adding the line)
+      if (this.endsIndentation(cleanTransform)) {
         indentLevel = Math.max(0, indentLevel - 1);
       }
 
       // Add indentation
       const indentedLine = indent.repeat(indentLevel) + line;
+
       formattedLines.push(indentedLine);
 
-      // Increase indent for opening braces
-      if (line.endsWith("{")) {
+      // Check if this line starts indentation (after adding the line)
+      if (this.startsIndentation(cleanTransform)) {
         indentLevel++;
       }
 
       // Decrease indent after closing braces if not already at start
-      if (line.endsWith("}") && !line.startsWith("}")) {
+      if (cleanTransform.endsWith("}") && !cleanTransform.startsWith("}")) {
         indentLevel = Math.max(0, indentLevel - 1);
+      }
+
+      // Add blank line after block ends (if_end or fl_layer_apply)
+      // Only add if the next line exists and is not already empty
+      // Don't add blank line after if_else since it's a mid-block separator
+      if (this.endsIndentation(cleanTransform) && cleanTransform !== "if_else") {
+        const nextLineIndex = i + 1;
+        if (nextLineIndex < lines.length) {
+          const nextLine = lines[nextLineIndex].trim();
+          if (nextLine !== "" && !nextLine.startsWith("#")) {
+            formattedLines.push("");
+          }
+        }
       }
     }
 
