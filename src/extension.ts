@@ -97,7 +97,7 @@ export function activate(context: vscode.ExtensionContext) {
   // Update preview when document changes
   const documentChangePreviewListener = vscode.workspace.onDidChangeTextDocument((event) => {
     if (event.document.languageId === languageId) {
-      previewProvider.updateContent(event.document);
+      previewProvider.updateContent(event.document, true);
     }
   });
 
@@ -115,12 +115,12 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Auto-open preview when a CLDT file is opened
-  const autoOpenPreviewListener = vscode.workspace.onDidOpenTextDocument((document) => {
-    if (document.languageId === languageId) {
-      previewProvider.showPreview(document);
-    }
-  });
+  // Auto-open preview when a CLDT file is opened - DISABLED
+  // const autoOpenPreviewListener = vscode.workspace.onDidOpenTextDocument((document) => {
+  //   if (document.languageId === languageId) {
+  //     previewProvider.showPreview(document);
+  //   }
+  // });
 
   context.subscriptions.push(
     completionProvider,
@@ -136,8 +136,8 @@ export function activate(context: vscode.ExtensionContext) {
     showPreviewToSideCommand,
     documentChangePreviewListener,
     documentSavePreviewListener,
-    editorChangeListener,
-    autoOpenPreviewListener
+    editorChangeListener
+    // autoOpenPreviewListener // DISABLED - preview must be opened manually via command
   );
 
   // Trigger diagnostics for currently open documents
@@ -147,12 +147,12 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
-  // Auto-open preview for already open CLDT documents
-  vscode.workspace.textDocuments.forEach((document) => {
-    if (document.languageId === languageId) {
-      previewProvider.showPreview(document);
-    }
-  });
+  // Auto-open preview for already open CLDT documents - DISABLED
+  // vscode.workspace.textDocuments.forEach((document) => {
+  //   if (document.languageId === languageId) {
+  //     previewProvider.showPreview(document);
+  //   }
+  // });
 
   // Apply decorations to already open CLDT documents
   updateDecorations();

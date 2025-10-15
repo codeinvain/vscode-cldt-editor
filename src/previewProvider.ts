@@ -251,7 +251,7 @@ export class CldtPreviewProvider {
       });
 
       this.currentDocument = document;
-      this.updateContent(document);
+      this.updateContent(document, true);
 
       // Handle panel disposal
       this.panel.onDidDispose(
