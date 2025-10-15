@@ -33,6 +33,7 @@ export class CldtPreviewProvider {
   private panel: vscode.WebviewPanel | undefined;
   private disposables: vscode.Disposable[] = [];
   private currentDocument: vscode.TextDocument | undefined;
+  private lastUrl: string | undefined;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
 
@@ -282,6 +283,13 @@ export class CldtPreviewProvider {
     }
 
     const boundUrl = this.evaluateUrl(document);
+
+    // Only update if the URL has changed
+    if (this.lastUrl === boundUrl.url) {
+      return;
+    }
+
+    this.lastUrl = boundUrl.url;
     this.panel.webview.html = this.getHtmlContent(boundUrl, document.fileName);
   }
 
@@ -1150,5 +1158,6 @@ export class CldtPreviewProvider {
 
     this.panel = undefined;
     this.currentDocument = undefined;
+    this.lastUrl = undefined;
   }
 }
