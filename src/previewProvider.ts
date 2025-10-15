@@ -34,6 +34,7 @@ export class CldtPreviewProvider {
   private disposables: vscode.Disposable[] = [];
   private currentDocument: vscode.TextDocument | undefined;
   private lastUrl: string | undefined;
+  private updateTimeout: NodeJS.Timeout | undefined;
 
   constructor(private readonly extensionUri: vscode.Uri) {}
 
@@ -282,15 +283,27 @@ export class CldtPreviewProvider {
       return;
     }
 
-    const boundUrl = this.evaluateUrl(document);
-
-    // Only update if the URL has changed
-    if (this.lastUrl === boundUrl.url) {
-      return;
+    // Clear any pending update
+    if (this.updateTimeout) {
+      clearTimeout(this.updateTimeout);
     }
 
-    this.lastUrl = boundUrl.url;
-    this.panel.webview.html = this.getHtmlContent(boundUrl, document.fileName);
+    // Debounce updates by 300ms to prevent thrashing
+    this.updateTimeout = setTimeout(() => {
+      if (!this.panel) {
+        return;
+      }
+
+      const boundUrl = this.evaluateUrl(document);
+
+      // Only update if the URL has changed
+      if (this.lastUrl === boundUrl.url) {
+        return;
+      }
+
+      this.lastUrl = boundUrl.url;
+      this.panel.webview.html = this.getHtmlContent(boundUrl, document.fileName);
+    }, 1000);
   }
 
   private evaluateUrl(document: vscode.TextDocument): BoundUrl {
@@ -1145,6 +1158,12 @@ export class CldtPreviewProvider {
   }
 
   public dispose() {
+    // Clear any pending updates
+    if (this.updateTimeout) {
+      clearTimeout(this.updateTimeout);
+      this.updateTimeout = undefined;
+    }
+
     if (this.panel) {
       this.panel.dispose();
     }
