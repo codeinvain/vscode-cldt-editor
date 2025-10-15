@@ -303,7 +303,7 @@ export class CldtPreviewProvider {
 
       this.lastUrl = boundUrl.url;
       this.panel.webview.html = this.getHtmlContent(boundUrl, document.fileName);
-    }, 1000);
+    }, 5000);
   }
 
   private evaluateUrl(document: vscode.TextDocument): BoundUrl {
