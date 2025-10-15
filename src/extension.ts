@@ -101,6 +101,13 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  // Force immediate preview update when document is saved
+  const documentSavePreviewListener = vscode.workspace.onDidSaveTextDocument((document) => {
+    if (document.languageId === languageId) {
+      previewProvider.updateContent(document, true);
+    }
+  });
+
   // Update preview when switching between editors
   const editorChangeListener = vscode.window.onDidChangeActiveTextEditor((editor) => {
     if (editor && editor.document.languageId === languageId) {
@@ -128,6 +135,7 @@ export function activate(context: vscode.ExtensionContext) {
     showPreviewCommand,
     showPreviewToSideCommand,
     documentChangePreviewListener,
+    documentSavePreviewListener,
     editorChangeListener,
     autoOpenPreviewListener
   );

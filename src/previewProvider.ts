@@ -241,7 +241,7 @@ export class CldtPreviewProvider {
       // If panel exists, reveal it and update content
       this.panel.reveal(column);
       this.currentDocument = document;
-      this.updateContent(document);
+      this.updateContent(document, true);
     } else {
       // Create new panel
       this.panel = vscode.window.createWebviewPanel(CldtPreviewProvider.viewType, "CLDT Preview", column, {
@@ -286,7 +286,7 @@ export class CldtPreviewProvider {
     }
   }
 
-  public updateContent(document: vscode.TextDocument) {
+  public updateContent(document: vscode.TextDocument, immediate = false) {
     if (!this.panel) {
       return;
     }
@@ -294,6 +294,20 @@ export class CldtPreviewProvider {
     // Clear any pending update
     if (this.updateTimeout) {
       clearTimeout(this.updateTimeout);
+    }
+
+    // If immediate update (e.g., from save), skip debounce
+    if (immediate) {
+      const boundUrl = this.evaluateUrl(document);
+
+      // Only update if the URL has changed
+      if (this.lastUrl === boundUrl.url) {
+        return;
+      }
+
+      this.lastUrl = boundUrl.url;
+      this.panel.webview.html = this.getHtmlContent(boundUrl, document.fileName);
+      return;
     }
 
     // Debounce updates by 300ms to prevent thrashing
