@@ -11,7 +11,8 @@ export class CldtFormattingProvider implements vscode.DocumentFormattingEditProv
 
     // Check if this is a Cloudinary URL format
     if (this.isUrl(text)) {
-      const formatted = this.formatRawUrl(text);
+      const formatted = this.formatCloudinaryTransformationFormat(this.formatRawUrl(text));
+
       if (formatted !== text) {
         const fullRange = new vscode.Range(document.positionAt(0), document.positionAt(text.length));
         edits.push(vscode.TextEdit.replace(fullRange, formatted));
