@@ -55,11 +55,26 @@ A Visual Studio Code extension that provides comprehensive language support for 
 
 ## Installation
 
-### From VSIX (Manual Installation)
+### From VS Code Marketplace (Recommended)
 
+1. Open VS Code
+2. Go to Extensions (⇧⌘X on macOS, Ctrl+Shift+X on Windows/Linux)
+3. Search for "CLDT Editor" or "Cloudinary Transformation"
+4. Click "Install"
+
+### From VSIX File (Manual Installation)
+
+If you have a `.vsix` file (distributed privately or built locally):
+
+**Via Command Line:**
+\`\`\`bash
+code --install-extension cldt-editor-0.1.0.vsix
+\`\`\`
+
+**Via VS Code UI:**
 1. Download the `.vsix` file
 2. Open VS Code
-3. Go to Extensions (Cmd+Shift+X on macOS, Ctrl+Shift+X on Windows/Linux)
+3. Go to Extensions (⇧⌘X on macOS, Ctrl+Shift+X on Windows/Linux)
 4. Click the "..." menu at the top of the Extensions panel
 5. Select "Install from VSIX..."
 6. Choose the downloaded `.vsix` file
@@ -67,25 +82,21 @@ A Visual Studio Code extension that provides comprehensive language support for 
 ### Building from Source
 
 \`\`\`bash
-
 # Clone the repository
-
-git clone <repository-url>
-cd vscode-ext-tx-editor
+git clone https://github.com/CloudinaryLtd/ecosystems-components.git
+cd ecosystems-components/vscode-ext-tx-editor
 
 # Install dependencies
-
 npm install
 
 # Compile the extension
-
 npm run compile
 
-# Package the extension (optional)
-
-npm install -g vsce
-vsce package
+# Package the extension into .vsix file
+npm run package
 \`\`\`
+
+This will create a `cldt-editor-0.1.0.vsix` file that you can install locally or share with others.
 
 ## Usage
 
@@ -278,6 +289,108 @@ vscode-ext-tx-editor/
 \`\`\`bash
 npm run compile
 npm run test
+\`\`\`
+
+## Publishing
+
+### Prerequisites for Publishing to VS Code Marketplace
+
+1. **Create a Publisher Account:**
+   - Go to [Visual Studio Marketplace](https://marketplace.visualstudio.com/)
+   - Sign in with your Microsoft account
+   - Create a publisher ID if you don't have one
+
+2. **Generate a Personal Access Token (PAT):**
+   - Visit [Azure DevOps](https://dev.azure.com/)
+   - Go to User Settings → Personal Access Tokens
+   - Create a new token with **Marketplace (Publish)** scope
+   - Save the token securely (you won't be able to see it again)
+
+3. **Login with vsce:**
+   \`\`\`bash
+   npx vsce login <your-publisher-name>
+   \`\`\`
+   Enter your Personal Access Token when prompted.
+
+### Publishing Steps
+
+1. **Update Version Number:**
+   \`\`\`bash
+   # Update version in package.json (e.g., from 0.1.0 to 0.1.1)
+   npm version patch  # for bug fixes
+   npm version minor  # for new features
+   npm version major  # for breaking changes
+   \`\`\`
+
+2. **Build and Test:**
+   \`\`\`bash
+   npm run compile
+   npm run lint
+   # Test the extension thoroughly
+   \`\`\`
+
+3. **Package the Extension:**
+   \`\`\`bash
+   npm run package
+   \`\`\`
+   This creates a `.vsix` file you can test locally before publishing.
+
+4. **Publish to Marketplace:**
+   \`\`\`bash
+   npm run publish
+   \`\`\`
+   Or with explicit version bump:
+   \`\`\`bash
+   npx vsce publish patch  # Increments patch version and publishes
+   npx vsce publish minor  # Increments minor version and publishes
+   npx vsce publish major  # Increments major version and publishes
+   \`\`\`
+
+### Private Distribution (Alternative)
+
+If you don't want to publish publicly, you can distribute the `.vsix` file directly:
+
+1. **Build the package:**
+   \`\`\`bash
+   npm run package
+   \`\`\`
+
+2. **Share the `.vsix` file** via:
+   - Email or file sharing service
+   - Internal package repository
+   - GitHub releases page
+
+3. **Users install with:**
+   \`\`\`bash
+   code --install-extension cldt-editor-0.1.0.vsix
+   \`\`\`
+
+### Publishing Checklist
+
+Before publishing, ensure:
+- [ ] Version number is updated in `package.json`
+- [ ] `CHANGELOG.md` is updated with changes
+- [ ] All tests pass
+- [ ] No linter errors
+- [ ] README is up to date
+- [ ] LICENSE file exists
+- [ ] Extension works in a fresh VS Code installation
+- [ ] Screenshots/GIFs are current (if applicable)
+
+### Useful Publishing Commands
+
+\`\`\`bash
+# Check what will be published
+npx vsce ls
+
+# View package contents as a tree
+npx vsce ls --tree
+
+# Package without publishing
+npm run package
+
+# Unpublish a version (use with caution!)
+npx vsce unpublish <publisher>.<extension-name>@<version>
 \`\`\`
 
 ## Contributing
