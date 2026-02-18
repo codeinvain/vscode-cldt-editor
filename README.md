@@ -72,6 +72,7 @@ code --install-extension cldt-editor-0.1.0.vsix
 \`\`\`
 
 **Via VS Code UI:**
+
 1. Download the `.vsix` file
 2. Open VS Code
 3. Go to Extensions (⇧⌘X on macOS, Ctrl+Shift+X on Windows/Linux)
@@ -82,18 +83,23 @@ code --install-extension cldt-editor-0.1.0.vsix
 ### Building from Source
 
 \`\`\`bash
+
 # Clone the repository
+
 git clone https://github.com/CloudinaryLtd/ecosystems-components.git
 cd ecosystems-components/vscode-ext-tx-editor
 
 # Install dependencies
-npm install
+
+pnpm install
 
 # Compile the extension
-npm run compile
+
+pnpm run compile
 
 # Package the extension into .vsix file
-npm run package
+
+pnpm run package
 \`\`\`
 
 This will create a `cldt-editor-0.1.0.vsix` file that you can install locally or share with others.
@@ -287,8 +293,8 @@ vscode-ext-tx-editor/
 ### Testing
 
 \`\`\`bash
-npm run compile
-npm run test
+pnpm run compile
+pnpm run test
 \`\`\`
 
 ## Publishing
@@ -316,34 +322,38 @@ npm run test
 
 1. **Update Version Number:**
    \`\`\`bash
+
    # Update version in package.json (e.g., from 0.1.0 to 0.1.1)
-   npm version patch  # for bug fixes
-   npm version minor  # for new features
-   npm version major  # for breaking changes
+
+   pnpm version patch # for bug fixes
+   pnpm version minor # for new features
+   pnpm version major # for breaking changes
    \`\`\`
 
 2. **Build and Test:**
    \`\`\`bash
-   npm run compile
-   npm run lint
+   pnpm run compile
+   pnpm run lint
+
    # Test the extension thoroughly
+
    \`\`\`
 
 3. **Package the Extension:**
    \`\`\`bash
-   npm run package
+   pnpm run package
    \`\`\`
    This creates a `.vsix` file you can test locally before publishing.
 
 4. **Publish to Marketplace:**
    \`\`\`bash
-   npm run publish
+   pnpm run publish
    \`\`\`
    Or with explicit version bump:
    \`\`\`bash
-   npx vsce publish patch  # Increments patch version and publishes
-   npx vsce publish minor  # Increments minor version and publishes
-   npx vsce publish major  # Increments major version and publishes
+   npx vsce publish patch # Increments patch version and publishes
+   npx vsce publish minor # Increments minor version and publishes
+   npx vsce publish major # Increments major version and publishes
    \`\`\`
 
 ### Private Distribution (Alternative)
@@ -352,7 +362,7 @@ If you don't want to publish publicly, you can distribute the `.vsix` file direc
 
 1. **Build the package:**
    \`\`\`bash
-   npm run package
+   pnpm run package
    \`\`\`
 
 2. **Share the `.vsix` file** via:
@@ -368,6 +378,7 @@ If you don't want to publish publicly, you can distribute the `.vsix` file direc
 ### Publishing Checklist
 
 Before publishing, ensure:
+
 - [ ] Version number is updated in `package.json`
 - [ ] `CHANGELOG.md` is updated with changes
 - [ ] All tests pass
@@ -380,16 +391,21 @@ Before publishing, ensure:
 ### Useful Publishing Commands
 
 \`\`\`bash
+
 # Check what will be published
+
 npx vsce ls
 
 # View package contents as a tree
+
 npx vsce ls --tree
 
 # Package without publishing
-npm run package
+
+pnpm run package
 
 # Unpublish a version (use with caution!)
+
 npx vsce unpublish <publisher>.<extension-name>@<version>
 \`\`\`
 

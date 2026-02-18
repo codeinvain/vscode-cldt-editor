@@ -86,7 +86,7 @@ sample.jpg
 To install permanently in Cursor/VS Code:
 
 ```bash
-npm install -g @vscode/vsce
+pnpm install -g @vscode/vsce
 vsce package
 ```
 

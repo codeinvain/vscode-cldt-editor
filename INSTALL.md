@@ -19,14 +19,13 @@ If you want to install it permanently in your VS Code:
 1. **Package the extension:**
 
    ```bash
-   npm install -g @vscode/vsce
+   pnpm install -g @vscode/vsce
    vsce package
    ```
 
    This creates a `.vsix` file.
 
 2. **Install the .vsix file:**
-
    - Open VS Code
    - Go to Extensions (Cmd+Shift+X)
    - Click the "..." menu at the top
@@ -50,13 +49,13 @@ If you want to install it permanently in your VS Code:
 
 1. Check the Extension Host output: View > Output > "Extension Host"
 2. Look for any error messages
-3. Make sure the extension compiled successfully: `npm run compile`
+3. Make sure the extension compiled successfully: `pnpm run compile`
 
 ### Changes not reflecting?
 
 If you're developing and making changes:
 
-1. Run `npm run compile` after each change
+1. Run `pnpm run compile` after each change
 2. In the Extension Development Host window, reload: Cmd+R (macOS) or Ctrl+R (Windows/Linux)
 
 ## Current Status

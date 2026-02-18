@@ -127,7 +127,7 @@ sample.jpg
 ### To Install Permanently:
 
 ```bash
-npm install -g @vscode/vsce
+pnpm install -g @vscode/vsce
 vsce package
 # Then install the generated .vsix file via Extensions panel
 ```
