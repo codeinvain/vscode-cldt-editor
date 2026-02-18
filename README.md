@@ -2,6 +2,17 @@
 
 A Visual Studio Code extension that provides comprehensive language support for `.cldt` (Cloudinary Transformation) files. This extension makes it easier to write and maintain Cloudinary image transformation configurations with syntax highlighting, IntelliSense, and validation.
 
+## Prerequisites
+
+This project uses [pnpm](https://pnpm.io/) as its package manager. To install pnpm:
+
+```bash
+npm install --global corepack@latest
+corepack enable pnpm
+```
+
+See https://pnpm.io/installation for more options.
+
 ## Features
 
 ### 🎨 Syntax Highlighting
