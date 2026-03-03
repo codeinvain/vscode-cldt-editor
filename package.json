@@ -59,6 +59,12 @@
         "title": "Open Preview to the Side",
         "category": "CLDT",
         "icon": "$(open-preview)"
+      },
+      {
+        "command": "cldt.refreshPreview",
+        "title": "Refresh Preview",
+        "category": "CLDT",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -83,6 +89,10 @@
         },
         {
           "command": "cldt.showPreviewToSide",
+          "when": "editorLangId == cldt"
+        },
+        {
+          "command": "cldt.refreshPreview",
           "when": "editorLangId == cldt"
         }
       ]

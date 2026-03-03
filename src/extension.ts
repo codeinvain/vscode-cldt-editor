@@ -94,6 +94,13 @@ export function activate(context: vscode.ExtensionContext) {
     }
   });
 
+  const refreshPreviewCommand = vscode.commands.registerCommand("cldt.refreshPreview", () => {
+    const editor = vscode.window.activeTextEditor;
+    if (editor && editor.document.languageId === languageId) {
+      previewProvider.forceRefresh(editor.document);
+    }
+  });
+
   // Update preview when document changes
   const documentChangePreviewListener = vscode.workspace.onDidChangeTextDocument((event) => {
     if (event.document.languageId === languageId) {
@@ -134,6 +141,7 @@ export function activate(context: vscode.ExtensionContext) {
     decorationEditorChangeListener,
     showPreviewCommand,
     showPreviewToSideCommand,
+    refreshPreviewCommand,
     documentChangePreviewListener,
     documentSavePreviewListener,
     editorChangeListener

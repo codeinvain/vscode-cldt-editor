@@ -278,6 +278,11 @@ export class CldtPreviewProvider {
                 await this.fetchAndSendHeaders(message.url, this.currentDocument.getText());
               }
               break;
+            case "refresh":
+              if (this.currentDocument) {
+                this.forceRefresh(this.currentDocument);
+              }
+              break;
           }
         },
         null,
@@ -326,6 +331,20 @@ export class CldtPreviewProvider {
       this.lastUrl = boundUrl.url;
       this.panel.webview.html = this.getHtmlContent(boundUrl, document.fileName);
     }, 5000);
+  }
+
+  public forceRefresh(document: vscode.TextDocument) {
+    if (!this.panel) {
+      return;
+    }
+
+    if (this.updateTimeout) {
+      clearTimeout(this.updateTimeout);
+    }
+
+    this.lastUrl = undefined;
+    this.currentDocument = document;
+    this.updateContent(document, true);
   }
 
   private evaluateUrl(document: vscode.TextDocument): BoundUrl {
