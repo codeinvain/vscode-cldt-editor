@@ -413,6 +413,9 @@
       const statusText = document.getElementById('status-text');
       const imageInfo = document.getElementById('image-info');
       const content = document.getElementById('content');
+      // The error page replaces #content's children, which detaches the image container.
+      // Keep a reference so a retry can put it back.
+      const imageContainer = content.querySelector('.image-container');
       const hintsContainer = document.getElementById('hints-container');
       const hintsList = document.getElementById('hints-list');
 
@@ -487,6 +490,11 @@
           });
       };
 
+      // A cold Cloudinary transformation can fail transiently on the first request while the
+      // derived asset is still being generated. The extension's header request usually succeeds
+      // right after, so we retry the image load once before giving up.
+      let imageRetried = false;
+
       img.onerror = function() {
           loading.style.display = 'none';
           statusDot.classList.remove('loading');
@@ -525,7 +533,22 @@
 
                   // Check if we're in error mode or success mode
                   if (img.style.display === 'none') {
-                      // Error mode - display full headers in content area
+                      // Error mode. If the header request got a successful image response, the
+                      // <img> failure was transient (e.g. a cold transformation timing out). Retry once.
+                      const contentType = otherHeaders['content-type'] || '';
+                      const headersOk = message.statusCode >= 200 && message.statusCode < 300;
+                      if (!imageRetried && headersOk && contentType.startsWith('image/')) {
+                          imageRetried = true;
+                          statusDot.classList.remove('error');
+                          statusDot.classList.add('loading');
+                          statusText.textContent = 'Retrying...';
+                          content.replaceChildren(imageContainer);
+                          loading.style.display = '';
+                          img.src = imageUrl + (imageUrl.includes('?') ? '&' : '?') + '_cldt_retry=' + Date.now();
+                          break;
+                      }
+
+                      // Display full headers in content area
                       const cldHeadersList = Object.keys(cldHeaders).length > 0
                           ? Object.entries(cldHeaders)
                               .map(([key, value]) => `<li><strong>${key}:</strong> ${value}</li>`)
@@ -539,7 +562,7 @@
                           : '<li style="color: var(--vscode-descriptionForeground); font-style: italic;">No other headers found</li>';
 
                       const statusInfo = message.statusCode
-                          ? `<p style="margin-bottom: 16px; color: var(--vscode-descriptionForeground);">HTTP Status: ${message.statusCode} ${message.statusMessage || ''}</p>`
+                          ? `<p style="margin-bottom: 16px; color: var(--vscode-descriptionForeground);">HTTP Status (from a separate header request): ${message.statusCode} ${message.statusMessage || ''}</p>`
                           : '';
 
                       content.innerHTML = `
