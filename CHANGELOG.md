@@ -2,7 +2,7 @@
 
 All notable changes to the CLDT Editor extension will be documented in this file.
 
-## [0.1.0] - 2024
+## [0.1.0] - 2026-09-10
 
 ### Added
 

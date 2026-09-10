@@ -1,19 +1,33 @@
 {
   "name": "cldt-editor",
-  "displayName": "CLDT Editor",
-  "description": "Language support for Cloudinary Transformation (.cldt) files",
+  "displayName": "CLDT Editor \u2014 Cloudinary Transformation Language",
+  "description": "Syntax highlighting, IntelliSense, validation, formatting and live preview for Cloudinary transformation (.cldt) files. An unofficial community extension.",
   "version": "0.1.0",
-  "publisher": "cloudinary",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/CloudinaryLtd/ecosystems-components.git",
-    "directory": "vscode-ext-tx-editor"
+  "publisher": "codeinvain",
+  "license": "SEE LICENSE IN LICENSE",
+  "icon": "images/icon.png",
+  "galleryBanner": {
+    "color": "#3448C5",
+    "theme": "dark"
   },
+  "qna": false,
   "engines": {
     "vscode": "^1.75.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Snippets",
+    "Formatters",
+    "Linters"
+  ],
+  "keywords": [
+    "cloudinary",
+    "cldt",
+    "transformation",
+    "image",
+    "media",
+    "cdn",
+    "url"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -113,8 +127,8 @@
     "pretest": "pnpm run compile && pnpm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "package": "vsce package",
-    "publish": "vsce publish"
+    "package": "vsce package --no-dependencies --allow-missing-repository",
+    "publish": "vsce publish --no-dependencies --allow-missing-repository"
   },
   "packageManager": "pnpm@10.30.0",
   "devDependencies": {
