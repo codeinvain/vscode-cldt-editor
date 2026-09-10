@@ -118,8 +118,16 @@ VS Code 1.75.0 or later. No configuration needed — it works out of the box.
 
 ## Feedback
 
-<!-- TODO: add a real contact channel before first publish -->
+Bug reports and feature requests are welcome at
+[github.com/codeinvain/vscode-cldt-editor/issues](https://github.com/codeinvain/vscode-cldt-editor/issues).
+
+## Contributing
+
+Pull requests welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for local setup.
 
 ## License
 
-Proprietary — all rights reserved. See the `LICENSE` file bundled with the extension. Cloudinary is a trademark of Cloudinary Ltd.
+[MIT](LICENSE) © Daniel Cohen.
+
+Cloudinary is a trademark of Cloudinary Ltd. This project is independent and is
+not affiliated with, endorsed by, or supported by Cloudinary Ltd.
